@@ -1,1 +1,2 @@
-Bu oyun chatgpt tarafindan hazirlanmistir.
+# multiplication-challenge
+Çarpım tablosu egzersiz
