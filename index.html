@@ -7,11 +7,10 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            background: #EAF6FF;
+            background: #F9F9F9;
             margin: 0;
             padding: 0;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
             height: 100vh;
@@ -19,31 +18,31 @@
         }
         #game-container {
             background: #FFFFFF;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-            max-width: 450px;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
             width: 90%;
+            max-width: 400px;
         }
-        h1, h2 {
+        h1, h2, h3 {
             color: #333;
         }
         .hidden {
             display: none;
         }
-        .timer, .score-preview {
+        .timer, .score-preview, .question-count {
             font-size: 18px;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             color: #555;
         }
         input[type="number"], .button {
-            font-size: 18px;
-            padding: 15px;
+            font-size: 16px;
+            padding: 10px;
             margin: 10px 0;
             width: 100%;
             box-sizing: border-box;
-            border: 2px solid #ddd;
-            border-radius: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
         }
         .button {
             background: #4CAF50;
@@ -61,25 +60,19 @@
         }
         .message {
             margin: 15px 0;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: bold;
         }
-        #leaderboard {
-            margin-top: 20px;
-            max-width: 450px;
-            width: 90%;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            border: 1px solid #ddd;
+        .scoreboard {
+            text-align: left;
+            font-size: 14px;
+            margin: 20px 0;
+            background: #EFEFEF;
             padding: 10px;
-            text-align: center;
+            border-radius: 5px;
         }
-        th {
-            background: #f4f4f4;
+        .scoreboard-title {
+            font-weight: bold;
         }
     </style>
 </head>
@@ -88,14 +81,19 @@
         <div id="start-container">
             <h1>Çarpım Tablosu Yarışması</h1>
             <p>Kaç soru çözmek istersiniz?</p>
-            <input type="number" id="question-count" min="1" max="50" placeholder="Soru sayısı girin" pattern="[0-9]*" inputmode="numeric" value="10" />
+            <input type="number" id="question-count" min="1" max="50" placeholder="Soru sayısı girin" />
             <button class="button" id="start-btn">Başla</button>
+            <div class="scoreboard">
+                <div class="scoreboard-title">Son Yarışma Skorları:</div>
+                <ul id="scoreboard-list"></ul>
+            </div>
         </div>
         <div id="question-container" class="hidden">
+            <h3 id="question-count-display"></h3>
             <div class="timer" id="timer">Zaman: 0s</div>
-            <div class="score-preview" id="score-preview">Kalan Puan: 10</div>
+            <div class="score-preview" id="score-preview">Kazanılabilecek Puan: 100</div>
             <div class="question" id="question"></div>
-            <input type="number" id="input-answer" placeholder="Cevap" pattern="[0-9]*" inputmode="numeric" autocomplete="off" autofocus />
+            <input type="number" id="input-answer" placeholder="Cevap" />
             <button class="button" id="submit-btn">Cevapla</button>
             <div class="message" id="feedback"></div>
         </div>
@@ -103,42 +101,30 @@
             <h2>Oyun Sonucu</h2>
             <p id="final-score"></p>
             <button class="button" id="restart-btn">Tekrar Başlat</button>
+            <div class="scoreboard">
+                <div class="scoreboard-title">Son Yarışma Skorları:</div>
+                <ul id="scoreboard-list-end"></ul>
+            </div>
         </div>
     </div>
 
-    <div id="leaderboard">
-        <h2>Son 24 Saatin Oyuncuları</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>İsim</th>
-                    <th>Puan</th>
-                    <th>Soru Sayısı</th>
-                    <th>Tarih</th>
-                </tr>
-            </thead>
-            <tbody id="leaderboard-body">
-                <!-- Skorlar burada gösterilecek -->
-            </tbody>
-        </table>
-    </div>
-
     <script>
-        const pokemonNames = ["Pikachu", "Bulbasaur", "Charmander", "Squirtle", "Jigglypuff", "Meowth", "Psyduck", "Snorlax", "Eevee", "Mewtwo"];
         const startContainer = document.getElementById('start-container');
         const questionContainer = document.getElementById('question-container');
         const scoreContainer = document.getElementById('score-container');
-        const leaderboardBody = document.getElementById('leaderboard-body');
         const questionElement = document.getElementById('question');
         const inputAnswer = document.getElementById('input-answer');
         const feedbackElement = document.getElementById('feedback');
         const finalScoreElement = document.getElementById('final-score');
         const timerElement = document.getElementById('timer');
         const scorePreviewElement = document.getElementById('score-preview');
+        const questionCountDisplay = document.getElementById('question-count-display');
         const startButton = document.getElementById('start-btn');
         const submitButton = document.getElementById('submit-btn');
         const restartButton = document.getElementById('restart-btn');
         const questionCountInput = document.getElementById('question-count');
+        const scoreboardList = document.getElementById('scoreboard-list');
+        const scoreboardListEnd = document.getElementById('scoreboard-list-end');
 
         let totalQuestions = 10;
         let currentQuestion = 1;
@@ -146,56 +132,44 @@
         let correctAnswer = 0;
         let startTime = 0;
         let timerInterval = null;
-        let currentPotentialScore = 10;
+        let currentPotentialScore = 100;
         let askedQuestions = new Set();
-        let playerName = "";
+        let scoreboard = JSON.parse(localStorage.getItem('scoreboard')) || [];
+
+        questionCountInput.focus();
+
+        function updateScoreboard() {
+            scoreboardList.innerHTML = '';
+            scoreboardListEnd.innerHTML = '';
+            scoreboard.forEach((entry) => {
+                const listItem = document.createElement('li');
+                listItem.textContent = `${entry.name}: ${entry.score}`;
+                scoreboardList.appendChild(listItem);
+                scoreboardListEnd.appendChild(listItem.cloneNode(true));
+            });
+        }
+
+        function saveScore(name, score) {
+            scoreboard.push({ name, score });
+            scoreboard = scoreboard.slice(-10); // Sadece son 10 skoru sakla
+            localStorage.setItem('scoreboard', JSON.stringify(scoreboard));
+        }
 
         function startTimer() {
             startTime = Date.now();
-            currentPotentialScore = 10;
+            currentPotentialScore = 100;
             timerInterval = setInterval(() => {
                 const elapsedTime = Math.floor((Date.now() - startTime) / 1000);
                 timerElement.textContent = `Zaman: ${elapsedTime}s`;
-                currentPotentialScore = Math.max(0, 10 - elapsedTime);
-                scorePreviewElement.textContent = `Kalan Puan: ${currentPotentialScore}`;
+                if (elapsedTime > 3) {
+                    currentPotentialScore = Math.max(0, 100 - (elapsedTime - 3) * 10);
+                }
+                scorePreviewElement.textContent = `Tam Puan: ${currentPotentialScore}`;
             }, 100);
         }
 
         function stopTimer() {
             clearInterval(timerInterval);
-        }
-
-        function generateRandomPokemon() {
-            return pokemonNames[Math.floor(Math.random() * pokemonNames.length)];
-        }
-
-        function saveGameData() {
-            const gameData = {
-                playerName,
-                score,
-                date: new Date().toISOString(),
-                questions: totalQuestions
-            };
-
-            const storedData = JSON.parse(localStorage.getItem("gameData") || "[]");
-            const recentData = storedData.filter(data => {
-                return new Date(data.date) >= new Date(Date.now() - 24 * 60 * 60 * 1000);
-            });
-
-            recentData.push(gameData);
-            localStorage.setItem("gameData", JSON.stringify(recentData));
-            updateLeaderboard(recentData);
-        }
-
-        function updateLeaderboard(data) {
-            leaderboardBody.innerHTML = data.map(item => `
-                <tr>
-                    <td>${item.playerName}</td>
-                    <td>${Math.round((item.score / (item.questions * 10)) * 100)}/100</td>
-                    <td>${item.questions}</td>
-                    <td>${new Date(item.date).toLocaleString()}</td>
-                </tr>
-            `).join('');
         }
 
         function generateQuestion() {
@@ -208,38 +182,38 @@
             askedQuestions.add(`${num1}x${num2}`);
             correctAnswer = num1 * num2;
             questionElement.textContent = `${num1} x ${num2} = ?`;
+            inputAnswer.value = '';
+            inputAnswer.focus();
+            questionCountDisplay.textContent = `Kalan Soru: ${totalQuestions - currentQuestion + 1}`;
             startTimer();
         }
 
         function checkAnswer() {
-            const userAnswer = parseInt(inputAnswer.value);
-            stopTimer();
-            if (userAnswer === correctAnswer) {
+            const userAnswer = inputAnswer.value.trim();
+            if (userAnswer === "") return;
+
+            if (parseInt(userAnswer) === correctAnswer) {
                 stopTimer();
                 score += currentPotentialScore;
                 feedbackElement.textContent = `Doğru! Kazandığınız Puan: ${currentPotentialScore}`;
                 nextQuestion();
             } else {
-                feedbackElement.textContent = `Yanlış! Doğru Cevap: ${correctAnswer}`;
+                feedbackElement.textContent = `Yanlış cevap, doğrusu ${correctAnswer} olacaktı.`;
+                nextQuestion();
             }
+        }
 
-            inputAnswer.value = '';
+        function checkAnswerTrue() {
+            const userAnswer = inputAnswer.value.trim();
+            if (userAnswer === "") return;
 
-            if (currentQuestion < totalQuestions) {
-                currentQuestion++;
-                setTimeout(() => {
-                    feedbackElement.textContent = '';
-                    generateQuestion();
-                }, 1000);
-            } else {
-                questionContainer.classList.add('hidden');
-                scoreContainer.classList.remove('hidden');
-                const totalPercentage = Math.round((score / (totalQuestions * 10)) * 100);
-                finalScoreElement.innerHTML = `
-                    <p>${playerName}, yarışmayı tamamladınız!</p>
-                    <p>Toplam Puan: ${score} (${totalPercentage}/100)</p>
-                `;
-                saveGameData();
+            console.log(parseInt(userAnswer), correctAnswer);
+
+            if (parseInt(userAnswer) === correctAnswer) {
+                stopTimer();
+                score += currentPotentialScore;
+                feedbackElement.textContent = `Doğru! Kazandığınız Puan: ${currentPotentialScore}`;
+                nextQuestion();
             }
         }
 
@@ -255,16 +229,6 @@
             }
         }
 
-        function restartGame() {
-            scoreContainer.classList.add('hidden');
-            startContainer.classList.remove('hidden');
-            currentQuestion = 1;
-            score = 0;
-            askedQuestions.clear();
-            playerName = generateRandomPokemon();
-            questionCountInput.focus();
-        }
-
         function startGame() {
             const questionCount = parseInt(questionCountInput.value);
             if (isNaN(questionCount) || questionCount <= 0) {
@@ -272,54 +236,59 @@
                 return;
             }
             totalQuestions = questionCount;
-            playerName = generateRandomPokemon();
             currentQuestion = 1;
             score = 0;
             askedQuestions.clear();
             startContainer.classList.add('hidden');
             questionContainer.classList.remove('hidden');
             generateQuestion();
+            updateScoreboard();
         }
 
-        // Event listeners
+        function endGame() {
+            stopTimer();
+            questionContainer.classList.add('hidden');
+            scoreContainer.classList.remove('hidden');
+            const totalPercentage = Math.round((score / (totalQuestions * 100)) * 100);
+            finalScoreElement.innerHTML = `
+                <p>Yarışmayı tamamladınız!</p>
+                <p>Toplam Puan: ${score} (${totalPercentage}/100)</p>
+            `;
+            const playerName = `Oyuncu-${Math.floor(Math.random() * 1000)}`;
+            saveScore(playerName, totalPercentage);
+            updateScoreboard();
+        }
+
         startButton.addEventListener('click', () => {
-            const questionCount = parseInt(questionCountInput.value);
-            if (isNaN(questionCount) || questionCount <= 0) {
-                alert("Lütfen geçerli bir soru sayısı girin.");
-                return;
-            }
-            totalQuestions = questionCount;
-            playerName = generateRandomPokemon();
-            currentQuestion = 1;
-            score = 0;
-            askedQuestions.clear();
-            startContainer.classList.add('hidden');
-            questionContainer.classList.remove('hidden');
-            generateQuestion();
-            inputAnswer.focus();
+            startGame();
         });
-        submitButton.addEventListener('click', checkAnswer);
-        restartButton.addEventListener('click', restartGame);
-        inputAnswer.addEventListener('keypress', (event) => {
-            if (event.key === 'Enter') {
+
+        submitButton.addEventListener('click', () => {
+            checkAnswer();
+        });
+
+        inputAnswer.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') {
                 checkAnswer();
+            } else {
+                checkAnswerTrue();
             }
         });
-        inputAnswer.addEventListener('input', checkAnswer);
+
+        restartButton.addEventListener('click', () => {
+            scoreContainer.classList.add('hidden');
+            startContainer.classList.remove('hidden');
+            questionCountInput.focus();
+        });
+
         questionCountInput.addEventListener('keypress', (event) => {
             if (event.key === 'Enter') {
                 startGame();
             }
         });
 
-        document.addEventListener('DOMContentLoaded', () => {
-            questionCountInput.focus();
-            const storedData = JSON.parse(localStorage.getItem("gameData") || "[]");
-            const recentData = storedData.filter(data => {
-                return new Date(data.date) >= new Date(Date.now() - 24 * 60 * 60 * 1000);
-            });
-            updateLeaderboard(recentData);
-        });
+        // Sayfa yüklendiğinde skor tablosunu güncelle
+        updateScoreboard();
     </script>
 </body>
 </html>
