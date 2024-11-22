@@ -81,7 +81,7 @@
         <div id="start-container">
             <h1>Çarpım Tablosu Yarışması</h1>
             <p>Kaç soru çözmek istersiniz?</p>
-            <input type="number" id="question-count" min="1" max="50" placeholder="Soru sayısı girin" />
+            <input type="number" inputmode="numeric" id="question-count" min="1" max="50" placeholder="Soru sayısı girin" autocomplete="off" />
             <button class="button" id="start-btn">Başla</button>
             <div class="scoreboard">
                 <div class="scoreboard-title">Son Yarışma Skorları:</div>
@@ -93,7 +93,7 @@
             <div class="timer" id="timer">Zaman: 0s</div>
             <div class="score-preview" id="score-preview">Kazanılabilecek Puan: 100</div>
             <div class="question" id="question"></div>
-            <input type="number" id="input-answer" placeholder="Cevap" />
+            <input type="number" inputmode="numeric" id="input-answer" placeholder="Cevap" autocomplete="off" />
             <button class="button" id="submit-btn">Cevapla</button>
             <div class="message" id="feedback"></div>
         </div>
