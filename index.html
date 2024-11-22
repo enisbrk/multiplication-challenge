@@ -88,14 +88,14 @@
         <div id="start-container">
             <h1>Çarpım Tablosu Yarışması</h1>
             <p>Kaç soru çözmek istersiniz?</p>
-            <input type="number" id="question-count" min="1" max="50" placeholder="Soru sayısı girin" pattern="[0-9]*" inputmode="numeric" />
+            <input type="number" id="question-count" min="1" max="50" placeholder="Soru sayısı girin" pattern="[0-9]*" inputmode="numeric" value="10" />
             <button class="button" id="start-btn">Başla</button>
         </div>
         <div id="question-container" class="hidden">
             <div class="timer" id="timer">Zaman: 0s</div>
             <div class="score-preview" id="score-preview">Kalan Puan: 10</div>
             <div class="question" id="question"></div>
-            <input type="number" id="input-answer" placeholder="Cevap" pattern="[0-9]*" inputmode="numeric" />
+            <input type="number" id="input-answer" placeholder="Cevap" pattern="[0-9]*" inputmode="numeric" autocomplete="off" autofocus />
             <button class="button" id="submit-btn">Cevapla</button>
             <div class="message" id="feedback"></div>
         </div>
@@ -215,8 +215,10 @@
             const userAnswer = parseInt(inputAnswer.value);
             stopTimer();
             if (userAnswer === correctAnswer) {
+                stopTimer();
                 score += currentPotentialScore;
                 feedbackElement.textContent = `Doğru! Kazandığınız Puan: ${currentPotentialScore}`;
+                nextQuestion();
             } else {
                 feedbackElement.textContent = `Yanlış! Doğru Cevap: ${correctAnswer}`;
             }
@@ -238,6 +240,18 @@
                     <p>Toplam Puan: ${score} (${totalPercentage}/100)</p>
                 `;
                 saveGameData();
+            }
+        }
+
+        function nextQuestion() {
+            if (currentQuestion < totalQuestions) {
+                currentQuestion++;
+                setTimeout(() => {
+                    feedbackElement.textContent = '';
+                    generateQuestion();
+                }, 1000);
+            } else {
+                endGame();
             }
         }
 
@@ -268,7 +282,22 @@
         }
 
         // Event listeners
-        startButton.addEventListener('click', startGame);
+        startButton.addEventListener('click', () => {
+            const questionCount = parseInt(questionCountInput.value);
+            if (isNaN(questionCount) || questionCount <= 0) {
+                alert("Lütfen geçerli bir soru sayısı girin.");
+                return;
+            }
+            totalQuestions = questionCount;
+            playerName = generateRandomPokemon();
+            currentQuestion = 1;
+            score = 0;
+            askedQuestions.clear();
+            startContainer.classList.add('hidden');
+            questionContainer.classList.remove('hidden');
+            generateQuestion();
+            inputAnswer.focus();
+        });
         submitButton.addEventListener('click', checkAnswer);
         restartButton.addEventListener('click', restartGame);
         inputAnswer.addEventListener('keypress', (event) => {
@@ -276,6 +305,7 @@
                 checkAnswer();
             }
         });
+        inputAnswer.addEventListener('input', checkAnswer);
         questionCountInput.addEventListener('keypress', (event) => {
             if (event.key === 'Enter') {
                 startGame();
