@@ -207,8 +207,6 @@
             const userAnswer = inputAnswer.value.trim();
             if (userAnswer === "") return;
 
-            console.log(parseInt(userAnswer), correctAnswer);
-
             if (parseInt(userAnswer) === correctAnswer) {
                 stopTimer();
                 score += currentPotentialScore;
